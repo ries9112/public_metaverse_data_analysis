@@ -1,0 +1,13 @@
+name: decentraland_thegraph_minimal_explore
+title: decentraland_thegraph_minimal_explore
+username:
+account: predictcrypto
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5696972
+bundleId: 5603912
+url: https://predictcrypto.shinyapps.io/decentraland_thegraph_minimal_explore/
+when: 1645489346.98425
+lastSyncTime: 1645489346.98426
+asMultiple: FALSE
+asStatic: FALSE

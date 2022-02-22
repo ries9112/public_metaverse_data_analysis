@@ -1,0 +1,13 @@
+name: decentraland_thegraph_xgboost
+title: decentraland_thegraph_xgboost
+username:
+account: predictcrypto
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5702379
+bundleId: 5603903
+url: https://predictcrypto.shinyapps.io/decentraland_thegraph_xgboost/
+when: 1645489181.39048
+lastSyncTime: 1645489181.39049
+asMultiple: FALSE
+asStatic: FALSE

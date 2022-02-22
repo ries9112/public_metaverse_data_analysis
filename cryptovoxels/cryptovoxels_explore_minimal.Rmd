@@ -1,0 +1,250 @@
+---
+title: "Cryptovoxels"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: spacelab
+runtime: shiny
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(echo = FALSE)
+# Decentraland pull data using The Graph
+library(ghql)
+library(jsonlite)
+library(tidyverse)
+library(lubridate)
+library(gganimate)
+library(flexdashboard)
+library(shiny)
+library(plotly)
+library(pins)
+# Point to the correct board
+board_register(name = "pins_board", 
+                url = "https://raw.githubusercontent.com/predictcrypto/pins/master/", 
+              board = "datatxt")
+# Pull the data
+data = pin_get(name = "cryptovoxels_all_orders")
+# Rename saleDate to date
+data = rename(data, date='saleDate')
+# convert island and suburb to characters (instead of factors)
+data = mutate(data, island = as.character(island), suburb = as.character(suburb))
+```
+
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+Island Filter:
+```{r}
+selectInput('island', '', choices=c('All', unique(data$island)), selected = c('Origin City', 'Proxima', 'Ceres', 'Little Ceres', 'Trinity', 'The Bronx', 'Electron', 'Proton', 'Neutron', 'Tokyo', 'Euro', 'Berlin', 'Helios', 'Milan', 'Poneke', 'San Francisco', 'Satoshi', 'Miami', '新宿区', 'München', '서울', 'Pilikai', 'Kauai', 'Honolulu', 'Scarcity', 'Flora', 'Fauna'), multiple = TRUE)
+```
+
+Transaction Date range:
+```{r}
+dateRangeInput('date_transaction',
+               label = '',
+               start = as.character(min(as.Date(substr(data$date, 1,10))), na.rm=T),
+               end = as.character(max(as.Date(substr(data$date, 1,10))), na.rm=T))
+```
+
+Size of area to calculate `area_avg_price` (shown on map)
+
+```{r}
+selectInput('area', '', choices=c('50 - USD', '100 - USD', '50 - ETH', '100 - ETH'))
+```
+
+<!-- MANA price range: -->
+<!-- ```{r} -->
+<!-- sliderInput('mana_range', '', min=0, max=1000000, value = c(0,500000), step = 10) -->
+<!-- ``` -->
+
+USD price range: 
+
+```{r}
+sliderInput('usd_range', '', min=0, max=max(data$price_USD, na.rm = T), value = c(0,50000), step = 10)
+```
+
+Column {.tabset}
+-----------------------------------------------------------------------
+
+### Map by Price (USD)
+
+```{r}
+renderPlotly({
+  # Filter data
+  if (input$island == 'All'){
+    data_t = filter(data,
+                    price_USD >= input$usd_range[[1]], 
+                    price_USD <= input$usd_range[[2]],
+                    date >= input$date_transaction[[1]],
+                    date <= input$date_transaction[[2]])
+  } else{
+    data_t = filter(data, island %in% input$island, 
+                    price_USD >= input$usd_range[[1]], 
+                    price_USD <= input$usd_range[[2]],
+                    date >= input$date_transaction[[1]],
+                    date <= input$date_transaction[[2]])
+  } 
+  # Only keep latest record per coordinate
+  data_t = data_t %>% 
+      group_by(x, y) %>% 
+      arrange(createdAt) %>%  
+      slice(n())
+  # Show plot
+  plot_ly( data_t, x = ~x, y = ~y,
+          # Hover text:
+          text = ~paste("x: ", x, '<br>y:', y, '<br>Price ($):', price_USD),
+          type = 'scatter',
+          mode='markers',
+          marker=list(
+          color = ~price_USD,
+          size = 9,
+          colorbar=list(title='Price USD'),
+          colorscale='Electric') ) %>%
+  layout(xaxis = list(
+           zerolinecolor = '#ffff',
+           zerolinewidth = 2,
+           gridcolor = 'ffff',
+           showgrid = FALSE),
+         yaxis = list(
+           zerolinecolor = '#ffff',
+           zerolinewidth = 2,
+           gridcolor = 'ffff',
+           showgrid = FALSE))
+})
+```
+
+### Map - Area Average Price
+
+```{r}
+renderPlot({
+  # Filter data
+  if (input$island == 'All'){
+    data_t = filter(data,
+                    price_USD >= input$usd_range[[1]], 
+                    price_USD <= input$usd_range[[2]],
+                    date >= input$date_transaction[[1]],
+                    date <= input$date_transaction[[2]])
+  } else{
+    data_t = filter(data, island == input$island, 
+                    price_USD >= input$usd_range[[1]], 
+                    price_USD <= input$usd_range[[2]],
+                    date >= input$date_transaction[[1]],
+                    date <= input$date_transaction[[2]])
+  } 
+  # Show plot - based on size of area chosen
+  if (input$area == '50 - USD'){
+    ggplot(data_t, aes(x, y)) +
+    geom_tile(aes(fill = area_avg_price_USD_50, width = 80L, height=80L))  +
+    scale_fill_viridis_c(option = "C")
+  } else if (input$area == '100 - USD'){
+      ggplot(data_t, aes(x, y)) +
+    geom_tile(aes(fill = area_avg_price_USD_100, width = 80L, height=80L))  +
+    scale_fill_viridis_c(option = "C")
+  } else if (input$area == '50 - ETH'){
+      ggplot(data_t, aes(x, y)) +
+    geom_tile(aes(fill = area_avg_price_ETH_50, width = 80L, height=80L))  +
+    scale_fill_viridis_c(option = "C")
+  } else{
+    ggplot(data_t, aes(x, y)) +
+    geom_tile(aes(fill = area_avg_price_ETH_100, width = 5L, height=5L))  +
+    scale_fill_viridis_c(option = "C")
+  }
+})
+```
+
+### Map by Price (ETH)
+
+```{r}
+renderPlotly({
+  # Filter data
+  if (input$island == 'All'){
+    data_t = filter(data,
+                    price_USD >= input$usd_range[[1]], 
+                    price_USD <= input$usd_range[[2]],
+                    date >= input$date_transaction[[1]],
+                    date <= input$date_transaction[[2]])
+  } else{
+    data_t = filter(data, island %in% input$island, 
+                    price_USD >= input$usd_range[[1]], 
+                    price_USD <= input$usd_range[[2]],
+                    date >= input$date_transaction[[1]],
+                    date <= input$date_transaction[[2]])
+  } 
+  # Only keep latest record per coordinate
+  data_t = data_t %>% 
+      group_by(x, y) %>% 
+      arrange(createdAt) %>%  
+      slice(n())
+  # Show plot
+  plot_ly( data_t, x = ~x, y = ~y,
+          # Hover text:
+          text = ~paste("x: ", x, '<br>y:', y, '<br>Price ($):', price_USD),
+          type = 'scatter',
+          mode='markers',
+          marker=list(
+          color = ~price_ETH,
+          size = 9,
+          colorbar=list(title='Price ETH'),
+          colorscale='Electric') ) %>%
+  layout(xaxis = list(
+           zerolinecolor = '#ffff',
+           zerolinewidth = 2,
+           gridcolor = 'ffff',
+           showgrid = FALSE),
+         yaxis = list(
+           zerolinecolor = '#ffff',
+           zerolinewidth = 2,
+           gridcolor = 'ffff',
+           showgrid = FALSE))
+})
+```
+
+### Map by Volume
+
+```{r}
+renderPlotly({
+  # Filter data
+  if (input$island == 'All'){
+    data_t = filter(data,
+                    price_USD >= input$usd_range[[1]], 
+                    price_USD <= input$usd_range[[2]],
+                    date >= input$date_transaction[[1]],
+                    date <= input$date_transaction[[2]])
+  } else{
+    data_t = filter(data, island %in% input$island, 
+                    price_USD >= input$usd_range[[1]], 
+                    price_USD <= input$usd_range[[2]],
+                    date >= input$date_transaction[[1]],
+                    date <= input$date_transaction[[2]])
+  } 
+  # Only keep latest record per coordinate
+  data_t = data_t %>% 
+      group_by(x, y) %>% 
+      arrange(createdAt) %>%  
+      slice(n())
+  # Show plot
+  plot_ly( data_t, x = ~x, y = ~y,
+          # Hover text:
+          text = ~paste("x: ", x, '<br>y:', y, '<br>Price ($):', price_USD),
+          type = 'scatter',
+          mode='markers',
+          marker=list(
+          color = ~volume,
+          size = 9,
+          colorbar=list(title='Volume (Area*Height)'),
+          colorscale='Electric') ) %>%
+  layout(xaxis = list(
+           zerolinecolor = '#ffff',
+           zerolinewidth = 2,
+           gridcolor = 'ffff',
+           showgrid = FALSE),
+         yaxis = list(
+           zerolinecolor = '#ffff',
+           zerolinewidth = 2,
+           gridcolor = 'ffff',
+           showgrid = FALSE))
+})
+```
+
+

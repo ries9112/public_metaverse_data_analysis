@@ -1,0 +1,13 @@
+name: cryptovoxels_explore_minimal
+title: cryptovoxels_explore_minimal
+username:
+account: predictcrypto
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5705310
+bundleId: 5603942
+url: https://predictcrypto.shinyapps.io/cryptovoxels_explore_minimal/
+when: 1645490651.92903
+lastSyncTime: 1645490651.9291
+asMultiple: FALSE
+asStatic: FALSE

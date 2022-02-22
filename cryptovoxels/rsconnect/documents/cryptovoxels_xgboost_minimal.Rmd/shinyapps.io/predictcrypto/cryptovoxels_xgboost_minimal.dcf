@@ -1,0 +1,13 @@
+name: cryptovoxels_xgboost_minimal
+title: cryptovoxels_xgboost_minimal
+username:
+account: predictcrypto
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5705300
+bundleId: 5603939
+url: https://predictcrypto.shinyapps.io/cryptovoxels_xgboost_minimal/
+when: 1645490520.70414
+lastSyncTime: 1645490520.70416
+asMultiple: FALSE
+asStatic: FALSE

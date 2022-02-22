@@ -1,0 +1,13 @@
+name: decentraland_explore_minimal
+title: decentraland_explore_minimal
+username:
+account: predictcrypto
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5704968
+bundleId: 5603818
+url: https://predictcrypto.shinyapps.io/decentraland_explore_minimal/
+when: 1645487134.60826
+lastSyncTime: 1645487134.60828
+asMultiple: FALSE
+asStatic: FALSE

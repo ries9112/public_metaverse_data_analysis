@@ -1,0 +1,199 @@
+---
+title: "Cryptovoxels XGBoost"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: spacelab
+runtime: shiny
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(echo = FALSE)
+# Decentraland pull data using The Graph
+library(ghql)
+library(jsonlite)
+library(tidyverse)
+library(lubridate)
+library(flexdashboard)
+library(shiny)
+library(plotly)
+library(xgboost)
+library(xgboostExplainer)
+library(DALEXtra)
+library(pins)
+# Point to the correct board
+board_register(name = "pins_board", 
+                url = "https://raw.githubusercontent.com/predictcrypto/pins/master/", 
+              board = "datatxt")
+# Pull the data
+data = pin_get(name = "cryptovoxels_all_orders")
+# Rename saleDate to date
+data = rename(data, date='saleDate')
+# convert island and suburb to characters (instead of factors)
+data = mutate(data, island = as.character(island), suburb = as.character(suburb))
+```
+
+
+Train
+===================================== 
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+x-coordinate range:
+```{r}
+sliderInput('x_range', '', 
+            min=min(as.numeric(data$x), na.rm = T), 
+            max=max(as.numeric(data$x), na.rm = T), 
+            value = c(min(as.numeric(data$x), na.rm=T), max(as.numeric(data$x), na.rm=T))) 
+```
+
+y-coordinate range:
+```{r}
+sliderInput('y_range', '', 
+            min=min(as.numeric(data$y), na.rm = T), 
+            max=max(as.numeric(data$y), na.rm = T), 
+            value = c(min(as.numeric(data$y), na.rm=T), max(as.numeric(data$y), na.rm=T))) 
+```
+
+Transaction Date range:
+```{r}
+dateRangeInput('date_transaction',
+               label = '',
+               start = Sys.Date()-60,
+               end = as.character(max(as.Date(substr(data$date, 1,10))), na.rm=T))
+```
+
+Training rounds for XGBoost model
+
+```{r}
+sliderInput('round', '', min=0, max=150, value = 80)
+```
+
+USD price range: 
+
+```{r}
+sliderInput('usd_range', '', min=0, max=max(data$price_USD, na.rm = T), value = c(0,50000), step = 10)
+```
+
+Column
+-----------------------------------------------------------------------
+
+### XGBoost Model Summary
+
+```{r}
+renderPrint({
+  # Filter data
+  data_t = filter(data, x >= input$x_range[[1]], x <= input$x_range[[2]], 
+                y >= input$y_range[[1]], y <= input$y_range[[2]],
+                price_USD >= input$usd_range[[1]], 
+                price_USD <= input$usd_range[[2]],
+                date >= input$date_transaction[[1]],
+                date <= input$date_transaction[[2]])#,
+                # transaction_date_created >= input$date_created[[1]],
+                # transaction_date_created <= input$date_created[[2]])
+  # add distance from center
+  data_t = mutate(data_t, distance_from_center = abs(x)+abs(y) )
+  # Make model
+  data <- as.matrix(select(data_t, x, y, buildHeight, area, volumeInVoxels, floor_height, area_avg_price_USD_50, area_avg_price_USD_100, area_avg_price_ETH_50, area_avg_price_ETH_100, distance_from_center) ) # can't use suburb or island, must be numeric
+  model <- xgboost(data, data_t$price_USD, nrounds = input$round,
+                   params = list(objective = "reg:squarederror"))
+  # Show model
+  model
+})
+```
+
+
+Predict
+===================================== 
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+### Enter values for prediction
+
+```{r}
+sliderInput('x_coord_pred', 'x coordinate', min=min(data$x,na.rm=T), max=max(data$x,na.rm=T), value = median(data$x,na.rm=T) ) # adjust this to correct range
+```
+
+```{r}
+sliderInput('y_coord_pred', 'y coordinate', min=min(data$y,na.rm=T), max=max(data$y,na.rm=T), value = median(data$y,na.rm=T)) # adjust this to correct range
+```
+
+```{r}
+sliderInput('buildHeight', 'Build Height', min=min(data$buildHeight,na.rm=T), max=max(data$buildHeight,na.rm=T), value = median(data$buildHeight,na.rm=T))
+```
+
+```{r}
+sliderInput('area', 'Area', min=min(data$area,na.rm=T), max=max(data$area,na.rm=T), value = median(data$area,na.rm=T))
+```
+
+```{r}
+sliderInput('volumeInVoxels', 'Volume In Voxels', min=min(data$volumeInVoxels,na.rm=T), max=max(data$volumeInVoxels,na.rm=T), value = median(data$volumeInVoxels,na.rm=T))
+```
+
+```{r}
+sliderInput('floor_height', 'Floor Height', min=min(data$floor_height,na.rm=T), max=max(data$floor_height,na.rm=T), value = median(data$floor_height,na.rm=T))
+```
+
+
+```{r}
+sliderInput('area_avg_price_pred_50_USD', 'Area average price (USD) 50 units', min=min(data$area_avg_price_USD_50,na.rm=T), max=max(data$area_avg_price_USD_50,na.rm=T), value = median(data$area_avg_price_USD_50,na.rm=T))
+```
+
+```{r}
+sliderInput('area_avg_price_pred_100_USD', 'Area average price (USD) 10 units', min=min(data$area_avg_price_USD_100,na.rm=T), max=max(data$area_avg_price_USD_100,na.rm=T), value = median(data$area_avg_price_USD_100,na.rm=T))
+```
+
+```{r}
+sliderInput('area_avg_price_pred_50_ETH', 'Area average price (ETH) 50 units', min=min(data$area_avg_price_ETH_50,na.rm=T), max=max(data$area_avg_price_ETH_50,na.rm=T), value = median(data$area_avg_price_ETH_50,na.rm=T))
+```
+
+```{r}
+sliderInput('area_avg_price_pred_100_ETH', 'Area average price (ETH) 10 units', min=min(data$area_avg_price_ETH_100,na.rm=T), max=max(data$area_avg_price_ETH_100,na.rm=T), value = median(data$area_avg_price_ETH_100,na.rm=T))
+```
+
+
+Column
+-----------------------------------------------------------------------
+
+### XGBoost Prediction
+
+```{r}
+renderPlot({
+  # Make test data
+  test = data.frame(x=input$x_coord_pred, y=input$y_coord_pred,
+                    buildHeight = input$buildHeight,
+                    area = input$area,
+                    volumeInVoxels = input$volumeInVoxels,
+                    floor_height = input$floor_height,
+                    area_avg_price_USD_50=input$area_avg_price_pred_50_USD,
+                    area_avg_price_USD_100=input$area_avg_price_pred_100_USD,
+                    area_avg_price_ETH_50=input$area_avg_price_pred_50_ETH,
+                    area_avg_price_ETH_100=input$area_avg_price_pred_100_ETH,
+                    distance_from_center=abs(input$x_coord_pred)+abs(input$y_coord_pred))
+  # Filter data
+  data_t = filter(data, x >= input$x_range[[1]], x <= input$x_range[[2]], 
+                y >= input$y_range[[1]], y <= input$y_range[[2]],
+                price_USD >= input$usd_range[[1]], 
+                price_USD <= input$usd_range[[2]],
+                date >= input$date_transaction[[1]],
+                date <= input$date_transaction[[2]])#,
+                # transaction_date_created >= input$date_created[[1]],
+                # transaction_date_created <= input$date_created[[2]])
+  # add distance from center
+  data_t = mutate(data_t, distance_from_center = abs(x)+abs(y) )
+   # Make model
+  data <- as.matrix(select(data_t, x, y, buildHeight, area, volumeInVoxels, floor_height, area_avg_price_USD_50, area_avg_price_USD_100, area_avg_price_ETH_50, area_avg_price_ETH_100, distance_from_center) ) # can't use suburb or island, must be numeric
+  model <- xgboost(data, data_t$price_USD, nrounds = input$round,
+                   params = list(objective = "reg:squarederror"))
+
+  # explainer without encode function
+  explainer <- explain_xgboost(model, data = data, data_t$price_USD)
+  plot(predict_parts(explainer, as.matrix(test)))
+
+})
+
+```
+
+
+

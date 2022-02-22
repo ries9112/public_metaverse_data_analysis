@@ -1,0 +1,170 @@
+---
+title: "Decentraland"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: spacelab
+runtime: shiny
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(echo = FALSE)
+# Decentraland pull data using The Graph
+library(ghql)
+library(jsonlite)
+library(tidyverse)
+library(lubridate)
+library(flexdashboard)
+library(shiny)
+library(plotly)
+library(xgboost)
+library(xgboostExplainer)
+library(DALEXtra)
+library(pins)
+# Point to the correct board
+board_register(name = "pins_board", 
+                url = "https://raw.githubusercontent.com/predictcrypto/pins/master/", 
+              board = "datatxt")
+# Pull the data
+data = pin_get(name = "decentraland_MANA_orders")
+# Only keep rows where price USD is present
+data = filter(data, is.na(price_USD)==F)
+```
+
+
+Train
+===================================== 
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+x-coordinate range:
+```{r}
+sliderInput('x_range', '', 
+            min=min(as.numeric(data$x), na.rm = T), 
+            max=max(as.numeric(data$x), na.rm = T), 
+            value = c(-150, 150)) 
+```
+
+y-coordinate range:
+```{r}
+sliderInput('y_range', '', 
+            min=min(as.numeric(data$y), na.rm = T), 
+            max=max(as.numeric(data$y), na.rm = T), 
+            value = c(-150, 150)) 
+```
+
+Transaction Date range:
+```{r}
+dateRangeInput('date_transaction',
+               label = '',
+               start = Sys.Date()-60,
+               end = as.character(max(as.Date(substr(data$date, 1,10))), na.rm=T))
+```
+
+Training rounds for XGBoost model
+
+```{r}
+sliderInput('round', '', min=0, max=150, value = 80)
+```
+
+USD price range: 
+
+```{r}
+sliderInput('usd_range', '', min=0, max=max(data$price_USD, na.rm = T), value = c(0,50000), step = 10)
+```
+
+Column
+-----------------------------------------------------------------------
+
+### XGBoost Model Summary
+
+```{r}
+renderPrint({
+  # Filter data
+  data_t = filter(data, x >= input$x_range[[1]], x <= input$x_range[[2]], 
+                y >= input$y_range[[1]], y <= input$y_range[[2]],
+                price_USD >= input$usd_range[[1]], 
+                price_USD <= input$usd_range[[2]],
+                date >= input$date_transaction[[1]],
+                date <= input$date_transaction[[2]])#,
+                # transaction_date_created >= input$date_created[[1]],
+                # transaction_date_created <= input$date_created[[2]])
+  # add distance from center
+  data_t = mutate(data_t, distance_from_center = abs(x)+abs(y) )
+  # Make model
+  data <- as.matrix(select(data_t, x, y, area_avg_price_USD_20, area_avg_price_USD_50, area_avg_price_USD_100, distance_from_center) )
+  model <- xgboost(data, data_t$price_USD, nrounds = input$round,
+                   params = list(objective = "reg:squarederror"))
+  # Show model
+  model
+})
+```
+
+
+Predict
+===================================== 
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+### Enter values for prediction
+
+```{r}
+sliderInput('x_coord_pred', 'x coordinate', min=-150, max=150, value = -30) # adjust this to correct range
+```
+
+```{r}
+sliderInput('y_coord_pred', 'y coordinate', min=-150, max=150, value = -10) # adjust this to correct range
+```
+
+```{r}
+sliderInput('area_avg_price_pred_20', 'Area average price (USD) 20 units', min=0, max=50000, value = 16000, step = 10)
+```
+
+```{r}
+sliderInput('area_avg_price_pred_50', 'Area average price (USD) 50 units', min=0, max=50000, value = 18000, step = 10)
+```
+
+```{r}
+sliderInput('area_avg_price_pred_100', 'Area average price (USD) 100 units', min=0, max=50000, value = 20000, step = 10)
+```
+
+Column
+-----------------------------------------------------------------------
+
+### XGBoost Prediction
+
+```{r}
+renderPlot({
+  # Make test data
+  test = data.frame(x=input$x_coord_pred, y=input$y_coord_pred,
+                    area_avg_price_USD_20=input$area_avg_price_pred_20,
+                    area_avg_price_USD_50=input$area_avg_price_pred_50,
+                    area_avg_price_USD_100=input$area_avg_price_pred_100,
+                    distance_from_center=abs(input$x_coord_pred)+abs(input$y_coord_pred))
+  # Filter data
+  data_t = filter(data, x >= input$x_range[[1]], x <= input$x_range[[2]], 
+                y >= input$y_range[[1]], y <= input$y_range[[2]],
+                price_USD >= input$usd_range[[1]], 
+                price_USD <= input$usd_range[[2]],
+                date >= input$date_transaction[[1]],
+                date <= input$date_transaction[[2]])#,
+                # transaction_date_created >= input$date_created[[1]],
+                # transaction_date_created <= input$date_created[[2]])
+  # add distance from center
+  data_t = mutate(data_t, distance_from_center = abs(x)+abs(y) )
+  # Make model
+  data <- as.matrix(select(data_t, x, y, area_avg_price_USD_20, area_avg_price_USD_50, area_avg_price_USD_100, distance_from_center) )
+  model <- xgboost(data, data_t$price_USD, nrounds = input$round,
+                   params = list(objective = "reg:squarederror"))
+
+  # explainer without encode function
+  explainer <- explain_xgboost(model, data = data, data_t$price_USD)
+  plot(predict_parts(explainer, as.matrix(test)))
+
+})
+
+```
+
+
+
