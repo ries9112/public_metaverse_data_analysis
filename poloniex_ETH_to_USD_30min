@@ -1,0 +1,1 @@
+Poloniex API to get ETH to USD prices for 30 min intervals (instead of daily): https://poloniex.com/public?command=returnChartData&currencyPair=USDT_ETH&start=1635699200&end=9999999999&period=1800
