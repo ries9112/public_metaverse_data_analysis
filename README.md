@@ -1,4 +1,4 @@
-# public_metaverse_data_analysis
+# Public Metaverse Data Analysis
 Public repo for metaverse data analysis
 
 ## Decentraland Dashboard
