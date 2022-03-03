@@ -16,7 +16,7 @@ jobs:
       - name: Run Script
         run: |-
           Rscript -e "install.packages('pins')"
-          Rscript -e "source('script.R')"
+          Rscript -e "source('update_datasets.R')"
       - name: Commit and push files
         run: |
           git config --local user.email "ries9112@colorado.edu"
