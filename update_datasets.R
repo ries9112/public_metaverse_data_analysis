@@ -5,8 +5,8 @@ board_register("https://raw.githubusercontent.com/predictcrypto/pins/master/","p
 
 # Pull data
 cryptovoxels_all_parcels = pin_get("cryptovoxels_all_parcels", "pins_data")
-cryptovoxels_orders = pin_get("cryptovoxels_orders", "pins_data")
-decentraland_thegraph = pin_get("decentraland_thegraph", "pins_data")
+cryptovoxels_orders = pin_get("cryptovoxels_all_orders", "pins_data")
+decentraland_thegraph = pin_get("decentraland_MANA_orders", "pins_data")
 
 # Write csv
 write.csv(cryptovoxels_all_parcels, "cryptovoxels/data/cryptovoxels_all_parcels.csv")
