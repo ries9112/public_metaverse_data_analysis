@@ -1,5 +1,7 @@
 name: Update datasets
-on: [push]
+on: 
+  schedule:
+    - cron: '0 15 * * *' 
 
 jobs:
   build:
