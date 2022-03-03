@@ -11,4 +11,4 @@ decentraland_thegraph = pin_get("decentraland_MANA_orders", "pins_data")
 # Write csv
 write.csv(cryptovoxels_all_parcels, "cryptovoxels/data/cryptovoxels_all_parcels.csv")
 write.csv(cryptovoxels_orders, "cryptovoxels/data/cryptovoxels_orders.csv")
-write.csv(decentraland_thegraph, "cryptovoxels/data/decentraland_thegraph.csv")
+write.csv(decentraland_thegraph, "decentraland/data/decentraland_thegraph.csv")
