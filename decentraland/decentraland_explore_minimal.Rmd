@@ -22,7 +22,7 @@ board_register(name = "pins_board",
                 url = "https://raw.githubusercontent.com/predictcrypto/pins/master/", 
               board = "datatxt")
 # Pull the data
-data = pin_get(name = "decentraland_MANA_orders")
+data = pin_get(name = "decentraland_MANA_orders", board='pins_board')
 # Only keep rows where price USD is present
 data = filter(data, is.na(price_USD)==F)
 ```
@@ -53,14 +53,14 @@ Transaction Date range:
 ```{r}
 dateRangeInput('date_transaction',
                label = '',
-               start = as.character(min(as.Date(substr(data$date, 1,10))), na.rm=T),
+               start = (Sys.Date()-months(6)),
                end = as.character(max(as.Date(substr(data$date, 1,10))), na.rm=T))
 ```
 
 Size of area to calculate `area_avg_price` (shown on map)
 
 ```{r}
-selectInput('area', '', choices=c('20', '50', '100'))
+selectInput('area', '', choices=c('3x3','5x5','10x10', '20x20', '50x50', '100x100'))
 ```
 
 <!-- MANA price range: -->
@@ -132,13 +132,25 @@ renderPlot({
                 # transaction_date_created >= input$date_created[[1]],
                 # transaction_date_created <= input$date_created[[2]])
   # Show plot - based on size of area chosen
-  if (input$area == '20'){
+  if (input$area == '20x20'){
     ggplot(data_t, aes(x, y)) +
     geom_tile(aes(fill = area_avg_price_USD_20, width = 5L, height=5L))  +
     scale_fill_viridis_c(option = "C")
-  } else if (input$area == '50'){
+  } else if (input$area == '50x50'){
       ggplot(data_t, aes(x, y)) +
     geom_tile(aes(fill = area_avg_price_USD_50, width = 5L, height=5L))  +
+    scale_fill_viridis_c(option = "C")
+    } else if (input$area == '3x3'){
+      ggplot(data_t, aes(x, y)) +
+    geom_tile(aes(fill = area_avg_price_USD_3, width = 5L, height=5L))  +
+    scale_fill_viridis_c(option = "C")
+  }  else if (input$area == '5x5'){
+      ggplot(data_t, aes(x, y)) +
+    geom_tile(aes(fill = area_avg_price_USD_5, width = 5L, height=5L))  +
+    scale_fill_viridis_c(option = "C")
+  }  else if (input$area == '10x10'){
+      ggplot(data_t, aes(x, y)) +
+    geom_tile(aes(fill = area_avg_price_USD_10, width = 5L, height=5L))  +
     scale_fill_viridis_c(option = "C")
   } else{
     ggplot(data_t, aes(x, y)) +

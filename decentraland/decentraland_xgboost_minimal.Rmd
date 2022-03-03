@@ -25,7 +25,7 @@ board_register(name = "pins_board",
                 url = "https://raw.githubusercontent.com/predictcrypto/pins/master/", 
               board = "datatxt")
 # Pull the data
-data = pin_get(name = "decentraland_MANA_orders")
+data = pin_get(name = "decentraland_MANA_orders", board='pins_board')
 # Only keep rows where price USD is present
 data = filter(data, is.na(price_USD)==F)
 ```
@@ -92,7 +92,7 @@ renderPrint({
   # add distance from center
   data_t = mutate(data_t, distance_from_center = abs(x)+abs(y) )
   # Make model
-  data <- as.matrix(select(data_t, x, y, area_avg_price_USD_20, area_avg_price_USD_50, area_avg_price_USD_100, distance_from_center) )
+  data <- as.matrix(select(data_t, x, y, area_avg_price_USD_3, area_avg_price_USD_5, area_avg_price_USD_10, area_avg_price_USD_20, area_avg_price_USD_50, area_avg_price_USD_100, distance_from_center) )
   model <- xgboost(data, data_t$price_USD, nrounds = input$round,
                    params = list(objective = "reg:squarederror"))
   # Show model
@@ -118,15 +118,27 @@ sliderInput('y_coord_pred', 'y coordinate', min=-150, max=150, value = -10) # ad
 ```
 
 ```{r}
-sliderInput('area_avg_price_pred_20', 'Area average price (USD) 20 units', min=0, max=50000, value = 16000, step = 10)
+sliderInput('area_avg_price_pred_3', 'Area average price (USD) 3x3 units', min=min(data$area_avg_price_USD_3, na.rm=T), max=max(data$area_avg_price_USD_3, na.rm=T), value = mean(data$area_avg_price_USD_3, na.rm=T), step = 10)
 ```
 
 ```{r}
-sliderInput('area_avg_price_pred_50', 'Area average price (USD) 50 units', min=0, max=50000, value = 18000, step = 10)
+sliderInput('area_avg_price_pred_5', 'Area average price (USD) 5x5 units', min=min(data$area_avg_price_USD_5, na.rm=T), max=max(data$area_avg_price_USD_5, na.rm=T), value = mean(data$area_avg_price_USD_5, na.rm=T), step = 10)
 ```
 
 ```{r}
-sliderInput('area_avg_price_pred_100', 'Area average price (USD) 100 units', min=0, max=50000, value = 20000, step = 10)
+sliderInput('area_avg_price_pred_10', 'Area average price (USD) 10x10 units', min=min(data$area_avg_price_USD_10, na.rm=T), max=max(data$area_avg_price_USD_10, na.rm=T), value = mean(data$area_avg_price_USD_10, na.rm=T), step = 10)
+```
+
+```{r}
+sliderInput('area_avg_price_pred_20', 'Area average price (USD) 20x20 units', min=min(data$area_avg_price_USD_20, na.rm=T), max=max(data$area_avg_price_USD_20, na.rm=T), value = mean(data$area_avg_price_USD_20, na.rm=T), step = 10)
+```
+
+```{r}
+sliderInput('area_avg_price_pred_50', 'Area average price (USD) 50x50 units', min=min(data$area_avg_price_USD_50, na.rm=T), max=max(data$area_avg_price_USD_50, na.rm=T), value = mean(data$area_avg_price_USD_50, na.rm=T), step = 10)
+```
+
+```{r}
+sliderInput('area_avg_price_pred_100', 'Area average price (USD) 100x100 units', min=min(data$area_avg_price_USD_100, na.rm=T), max=max(data$area_avg_price_USD_100, na.rm=T), value = mean(data$area_avg_price_USD_100, na.rm=T), step = 10)
 ```
 
 Column
@@ -138,6 +150,9 @@ Column
 renderPlot({
   # Make test data
   test = data.frame(x=input$x_coord_pred, y=input$y_coord_pred,
+                    area_avg_price_USD_3 = input$area_avg_price_pred_3,
+                    area_avg_price_USD_5 = input$area_avg_price_pred_5,
+                    area_avg_price_USD_10 = input$area_avg_price_pred_10,
                     area_avg_price_USD_20=input$area_avg_price_pred_20,
                     area_avg_price_USD_50=input$area_avg_price_pred_50,
                     area_avg_price_USD_100=input$area_avg_price_pred_100,
@@ -154,7 +169,7 @@ renderPlot({
   # add distance from center
   data_t = mutate(data_t, distance_from_center = abs(x)+abs(y) )
   # Make model
-  data <- as.matrix(select(data_t, x, y, area_avg_price_USD_20, area_avg_price_USD_50, area_avg_price_USD_100, distance_from_center) )
+  data <- as.matrix(select(data_t, x, y, area_avg_price_USD_3, area_avg_price_USD_5, area_avg_price_USD_10, area_avg_price_USD_20, area_avg_price_USD_50, area_avg_price_USD_100, distance_from_center) )
   model <- xgboost(data, data_t$price_USD, nrounds = input$round,
                    params = list(objective = "reg:squarederror"))
 
